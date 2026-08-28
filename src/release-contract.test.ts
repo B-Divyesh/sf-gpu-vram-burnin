@@ -15,7 +15,8 @@ describe('desktop release contract', () => {
     expect(workflow).toContain('SHA256SUMS');
     expect(workflow).toContain('latest.json');
     expect(workflow).toContain('mkdir publish-assets');
-    expect(workflow).toContain('find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS');
+    expect(workflow).toContain('find . -maxdepth 1 -type f ! -name SHA256SUMS ! -name latest.json -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS');
+    expect(workflow).toContain('! -name SHA256SUMS ! -name latest.json');
     expect(workflow).toContain('files: publish-assets/*');
   });
 
