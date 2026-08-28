@@ -15,6 +15,7 @@ describe('desktop release contract', () => {
     expect(workflow).toContain('SHA256SUMS');
     expect(workflow).toContain('latest.json');
     expect(workflow).toContain('(cd release-assets && find . -maxdepth 1');
+    expect(workflow).toContain('files: release-assets/**/*');
   });
 
   it('verifies the asset named by GitHub before the Unix installer keeps it', () => {

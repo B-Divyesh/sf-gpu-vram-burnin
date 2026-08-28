@@ -75,4 +75,4 @@ jobs:
         with:
           name: VRAM Burn-in Kit ${{ github.ref_name }}
           body: Unsigned desktop builds. Verify SHA256SUMS before installing.
-          files: release-assets/*
+          files: release-assets/**/*

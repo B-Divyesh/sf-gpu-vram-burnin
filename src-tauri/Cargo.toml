@@ -1,6 +1,6 @@
 [package]
 name = "gpu-vram-burnin"
-version = "0.1.7"
+version = "0.1.8"
 description = "Bounded GPU VRAM diagnostic receipt"
 edition = "2021"
 

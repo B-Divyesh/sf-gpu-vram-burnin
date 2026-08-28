@@ -1368,7 +1368,7 @@ dependencies = [
 
 [[package]]
 name = "gpu-vram-burnin"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "pollster",
  "serde",
