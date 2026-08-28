@@ -55,5 +55,5 @@ jobs:
           gh release download "$TAG" --pattern '*.msi' --pattern '*.exe' --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --dir release-assets || true
           cd release-assets
           sha256sum * > SHA256SUMS
-          printf '{"version":"%s","release":"https://github.com/%s/%s/releases/tag/%s"}\n' "$TAG" "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$TAG" > latest.json
+          gh release view "$TAG" --json assets --jq '{version: "'"$TAG"'", assets: [.assets[] | {name: .name, url: .downloadUrl}]}' > latest.json
           gh release upload "$TAG" SHA256SUMS latest.json --clobber

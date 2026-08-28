@@ -13,10 +13,10 @@ to a support case.
 * `ink` #17222a — deep blue-black bench background
 * `paper` #f7f1df — warm inspection paper
 * `paper-shadow` #d7ceb9 — cut-paper edge
-* `signal` #db613d — heat / attention orange
-* `mint` #177d6a — pass state teal
-* `violet` #57509b — compute-path layer
-* `slate` #52616a — secondary text
+* `signal` #e8784d — heat / attention orange
+* `mint` #08705f — pass state teal
+* `violet` #514991 — compute-path layer
+* `slate` #46545d — secondary text
 * `danger` #a12e2e — failing stage red
 
 The site uses a warm light treatment and a dark diagnostic-app treatment. Each

@@ -1,19 +1,33 @@
-# VRAM Burn-in Kit handoff — FAIL
+# VRAM Burn-in Kit handoff — repair v0.1.1
 
-Independent verification of candidate
-`8a00b78ae3d1a82f1c01d51b47d5e81c9ee5b8d8` at
-https://gpu-vram-burnin.sociobot.in/ failed on 2026-08-28.
+## What changed
 
-The exact live JS, CSS, and hero asset match this candidate's production build.
-The static demo, JSON/HTML downloads, keyboard path, and small bundle work,
-but this is not a working VRAM diagnostic: the native core only exposes
-`nvidia-smi` adapter discovery, the UI never calls it, and no real GPU test,
-thermal guard, retries, or real receipt exists. No GitHub Release exists, so
-there are no installable desktop assets. The advertised offline sample does not
-survive an offline reload, and axe has serious color-contrast findings.
+* Replaced the sample-only native shell with a Tauri command path that lists platform GPU adapters and runs a bounded WGPU allocation, deterministic fill, device copy, full-window readback comparison, and GPU compute submission. The desktop UI now exposes adapter selection, test window, selected-adapter NVIDIA temperature guard, retry count, errors, and a real receipt/casefile.
+* Added a versioned service worker that precaches the shell and Vite assets. `/demo` now persists only in `demo:gpu-vram-burnin:receipt`; real receipts use `gpu-vram-burnin:receipt`. Reset and Start for real are regression-tested.
+* Replaced pure-string claim tests with Playwright 1.58.2 browser tests that enter `/demo`, force offline reload, and inspect downloaded JSON/HTML files. Added claim coverage for the free basic receipt, no telemetry, and native guardrails.
+* Corrected axe serious contrast failures, made previously undersized controls 44px minimum, added a labelled license restore field with cached optimistic restoration, and added axe regression checks for landing, demo, and 404.
+* Added an actual 404 document/response override, immutable hashed-asset cache policy, release metadata caching, RGBA Tauri icon repair, and a release manifest containing asset download URLs.
 
-All three declared claim commands exit 0, but they are pure unit tests and not
-demo-entry-point sandbox tests; the actual offline claim fails in Chromium.
+## Verification evidence
 
-See [.factory/verification-1.md](verification-1.md) for exact commands,
-evidence, rate-limit observations, defects by severity, and remediation.
+Run from a clean install on 2026-08-28:
+
+* `npm ci` — pass, 0 vulnerabilities.
+* `npm test` — pass, 3 unit tests.
+* `npx tsc --noEmit` — pass.
+* `npm run test:e2e` — pass, 10 Playwright checks: desktop/mobile (390px), keyboard skip link, demo isolation, downloads, offline reload, privacy request interception, and axe (0 serious/critical violations on `/`, `/demo`, `/404.html`).
+* Every command listed in `.factory/claims.json` — pass individually.
+* `npm run build` — pass. Production output: JS 18.57 KB (7.26 KB gzip), CSS 10.43 KB (3.11 KB gzip), within static-product budgets.
+* `cargo check --manifest-path src-tauri/Cargo.toml` — pass after installing the standard Linux Tauri/GTK development packages missing from the base container.
+* `cargo test --manifest-path src-tauri/Cargo.toml` — pass, 2 native tests.
+* `git diff --check` and JSON validation of claims/static hosting config — pass.
+* Local Lighthouse mobile run: performance 91, accessibility 100, CLS 0. The headless browser crashed while taking its final full-page screenshot, so its 3.09 s local LCP is not treated as a release metric; bundle budgets and the Playwright/a11y checks above are the reliable local evidence.
+
+## Release and deployment
+
+The committed `v0.1.1` tag triggers the existing GitHub Actions release matrix for Windows, macOS arm64/x86_64, and Linux. It uploads the platform artifacts, `SHA256SUMS`, and `latest.json`; the static landing page resolves its buttons through the GitHub release API and caches metadata for one hour. The static deployment is supplied by the factory branch deployment configuration.
+
+## Known limits / operator action
+
+* This container has no physical GPU, so the real WGPU memory passes were compile- and contract-tested here, not exercised against hardware. The released desktop app must be smoke-tested on a supported GPU; NVIDIA thermal guarding requires the locally installed `nvidia-smi` utility.
+* Desktop artifacts are intentionally unsigned. To sign future releases, add `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX` to the repository Actions secrets and extend the release workflow with the owner-provided signing setup.

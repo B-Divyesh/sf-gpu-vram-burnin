@@ -3,21 +3,42 @@
     "id": "sample-offline",
     "claim": "Sample works offline",
     "where": "landing facts, demo banner",
-    "test": "npm test -- -t @claim:sample-offline",
-    "sandbox": "fresh browser or app state; bundled sample receipt only"
+    "test": "npm run test:e2e -- --grep @claim:sample-offline",
+    "sandbox": "fresh Chromium context; open /demo, wait for the shipped service worker, force offline, reload, and observe the receipt"
   },
   {
     "id": "casefile-export",
     "claim": "Downloads a JSON casefile with every test stage",
     "where": "sample receipt export button",
-    "test": "npm test -- -t @claim:casefile-export",
-    "sandbox": "demo receipt; parse downloaded JSON and assert five named stages"
+    "test": "npm run test:e2e -- --grep @claim:casefile-export",
+    "sandbox": "fresh Chromium context; open /demo, download the JSON casefile, and parse its five named stages"
   },
   {
     "id": "html-casefile",
     "claim": "Downloads a printable HTML casefile",
     "where": "sample receipt export button",
-    "test": "npm test -- -t @claim:html-casefile",
-    "sandbox": "demo receipt; assert generated document has a table and adapter name"
+    "test": "npm run test:e2e -- --grep @claim:html-casefile",
+    "sandbox": "fresh Chromium context; open /demo, download the HTML casefile, and inspect its table and adapter name"
+  },
+  {
+    "id": "basic-free",
+    "claim": "Basic pass is free",
+    "where": "landing facts, paid section",
+    "test": "npm run test:e2e -- --grep @claim:basic-free",
+    "sandbox": "fresh Chromium context; open /demo, verify the basic JSON export is enabled and no checkout request occurs"
+  },
+  {
+    "id": "no-telemetry",
+    "claim": "No telemetry runs",
+    "where": "privacy section, README",
+    "test": "npm run test:e2e -- --grep @claim:no-telemetry",
+    "sandbox": "fresh Chromium context; enter /demo and download its casefile while recording every request; assert none leave the product origin"
+  },
+  {
+    "id": "bounded-desktop-test",
+    "claim": "Desktop tests run locally",
+    "where": "landing facts, README",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml diagnostic_contract_rejects_unsafe_windows_and_guards",
+    "sandbox": "native core regression; assert only a bounded 64 MiB–16 GiB window, 50°C–100°C guard, and up to two retries are accepted before GPU work begins"
   }
 ]

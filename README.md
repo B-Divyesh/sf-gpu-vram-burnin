@@ -2,7 +2,7 @@
 
 VRAM Burn-in Kit is a local desktop utility for PC builders and local-AI
 operators. It runs bounded GPU memory checks and exports a small casefile that
-separates allocation, fill, copy, readback, and shader-path results.
+separates allocation, fill, copy, readback, and GPU compute scheduling results.
 
 It is for a card you do not yet trust with an overnight render or inference
 job. It is not an overclocking tool, repair tool, or hardware certification.
@@ -10,8 +10,9 @@ job. It is not an overclocking tool, repair tool, or hardware certification.
 ## Try the safe sample
 
 Run the site and open `/demo`, or use `/?demo=1`. The bundled RTX 5080 sample
-has five completed test stages. It uses the isolated `demo:gpu-vram-burnin`
-storage namespace. **Reset demo** restores it. **Start for real** discards it.
+has five completed test stages. It uses the isolated
+`demo:gpu-vram-burnin:receipt` storage namespace. **Reset demo** restores it.
+**Start for real** discards it.
 See [.factory/demo.md](.factory/demo.md) for the verifier path.
 
 ## Develop and verify
@@ -33,8 +34,11 @@ npm run tauri dev
 npm run tauri build
 ```
 
-The Rust core discovers NVIDIA adapters with the vendor-supported `nvidia-smi`
-telemetry command. It does not change clocks, power limits, or driver settings.
+The Rust core enumerates adapters through the platform GPU API, allocates the
+chosen bounded window, writes deterministic patterns, copies and reads it back,
+then submits a GPU compute pass. When NVIDIA `nvidia-smi` telemetry is present,
+it checks the temperature guard before each attempt. It does not change clocks,
+power limits, or driver settings.
 
 ## Install
 

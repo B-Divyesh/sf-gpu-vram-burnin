@@ -5,7 +5,7 @@
 | Test GPU memory before long jobs. | 6 | — |
 | For PC builders and local-AI operators who need evidence before trusting a card overnight. | 14 | — |
 | See a finished test receipt. | 5 | — |
-| Runs locally. | 2 | — |
+| Desktop tests run locally. | 4 | — |
 | Sample works offline. | 3 | — |
 | Basic pass is free. | 4 | — |
 | Know which path disagreed. | 4 | — |

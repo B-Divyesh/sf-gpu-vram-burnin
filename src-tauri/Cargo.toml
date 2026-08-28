@@ -1,6 +1,6 @@
 [package]
 name = "gpu-vram-burnin"
-version = "0.1.0"
+version = "0.1.1"
 description = "Bounded GPU VRAM diagnostic receipt"
 edition = "2021"
 
@@ -15,4 +15,5 @@ tauri-build = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }
-
+pollster = "0.3"
+wgpu = "0.19"
