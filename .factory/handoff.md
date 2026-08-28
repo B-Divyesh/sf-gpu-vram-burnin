@@ -1,4 +1,4 @@
-# VRAM Burn-in Kit handoff — repair v0.1.1
+# VRAM Burn-in Kit handoff — repair v0.1.3
 
 ## What changed
 
@@ -25,7 +25,7 @@ Run from a clean install on 2026-08-28:
 
 ## Release and deployment
 
-The committed `v0.1.1` tag triggers the existing GitHub Actions release matrix for Windows, macOS arm64/x86_64, and Linux. It uploads the platform artifacts, `SHA256SUMS`, and `latest.json`; the static landing page resolves its buttons through the GitHub release API and caches metadata for one hour. The static deployment is supplied by the factory branch deployment configuration.
+Repair commits `8caac33`, `db98e0c`, and `f63d193` are pushed to `main`; tag `v0.1.3` triggers the GitHub Actions release matrix for Windows, macOS arm64/x86_64, and Linux. It uploads the platform artifacts, `SHA256SUMS`, and `latest.json`; the static landing page resolves its buttons through the GitHub release API and caches metadata for one hour. The static deployment is supplied by the factory branch deployment configuration. At handoff, the v0.1.3 release run is queued at `https://github.com/B-Divyesh/sf-gpu-vram-burnin/actions/runs/33180000938`; v0.1.1/v0.1.2 attempts exposed and then corrected release-workflow target setup defects.
 
 ## Known limits / operator action
 
