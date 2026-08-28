@@ -36,7 +36,7 @@ window.addEventListener('online', () => { offline = false; render(); });
 window.addEventListener('offline', () => { offline = true; render(); });
 
 function header() { return `<a class="skip" href="#main">Skip to content</a><header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">▣</span> VRAM Burn-in Kit</a><nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="#how" data-anchor>How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>`; }
-function footer() { return `<footer><p>Bounded GPU memory tests with a diagnostic receipt.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.6</p><p class="generated-note">Illustration generated for this product.</p></footer>`; }
+function footer() { return `<footer><p>Bounded GPU memory tests with a diagnostic receipt.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.7</p><p class="generated-note">Illustration generated for this product.</p></footer>`; }
 function banner() { return demo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span><button class="quiet" data-action="reset-demo">Reset demo</button><button class="quiet" data-action="start-real">Start for real</button></span></aside>` : ''; }
 function layout(content: string) { return `${header()}${banner()}<main id="main" tabindex="-1">${offline ? '<p class="offline" role="status">You are offline. The sample run and exports still work.</p>' : ''}${content}</main>${footer()}<div class="sr" aria-live="polite">${liveMessage}</div>`; }
 
