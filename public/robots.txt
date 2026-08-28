@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gpu-vram-burnin.sociobot.in/sitemap.xml

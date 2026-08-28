@@ -1,0 +1,59 @@
+name: Release desktop app
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --target x86_64-pc-windows-msvc
+          - os: macos-latest
+            args: --target aarch64-apple-darwin
+          - os: macos-latest
+            args: --target x86_64-apple-darwin
+          - os: ubuntu-latest
+            args: --target x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Install Linux desktop dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: VRAM Burn-in Kit ${{ github.ref_name }}
+          releaseBody: Unsigned desktop builds. Verify the attached SHA256SUMS before installing.
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  checksums:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release download "$TAG" --pattern '*.msi' --pattern '*.exe' --pattern '*.dmg' --pattern '*.AppImage' --pattern '*.deb' --dir release-assets || true
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          printf '{"version":"%s","release":"https://github.com/%s/%s/releases/tag/%s"}\n' "$TAG" "${{ github.repository_owner }}" "${{ github.event.repository.name }}" "$TAG" > latest.json
+          gh release upload "$TAG" SHA256SUMS latest.json --clobber

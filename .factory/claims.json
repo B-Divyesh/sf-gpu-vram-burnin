@@ -1,0 +1,23 @@
+[
+  {
+    "id": "sample-offline",
+    "claim": "Sample works offline",
+    "where": "landing facts, demo banner",
+    "test": "npm test -- -t @claim:sample-offline",
+    "sandbox": "fresh browser or app state; bundled sample receipt only"
+  },
+  {
+    "id": "casefile-export",
+    "claim": "Downloads a JSON casefile with every test stage",
+    "where": "sample receipt export button",
+    "test": "npm test -- -t @claim:casefile-export",
+    "sandbox": "demo receipt; parse downloaded JSON and assert five named stages"
+  },
+  {
+    "id": "html-casefile",
+    "claim": "Downloads a printable HTML casefile",
+    "where": "sample receipt export button",
+    "test": "npm test -- -t @claim:html-casefile",
+    "sandbox": "demo receipt; assert generated document has a table and adapter name"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "slug": "gpu-vram-burnin",
+  "title": "VRAM Burn-in Kit",
+  "artifact_class": "desktop-app",
+  "summary": "Test GPU memory patterns and export a support-ready casefile."
+}
