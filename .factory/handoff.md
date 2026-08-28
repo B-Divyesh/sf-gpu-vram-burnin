@@ -1,4 +1,4 @@
-# VRAM Burn-in Kit handoff — repair v0.1.5
+# VRAM Burn-in Kit handoff — repair v0.1.6
 
 ## Result
 
@@ -57,7 +57,7 @@ without a GPU fixture.
 
 ## Release and deployment
 
-Tag `v0.1.5` is the release trigger. The static site remains `dist/site` and
+Tag `v0.1.6` is the release trigger. The static site remains `dist/site` and
 the factory branch deployment configuration remains unchanged. The GitHub
 Actions matrix is the only place platform artifacts are built; once it
 finishes, verify each release asset, `SHA256SUMS`, and `latest.json` before
