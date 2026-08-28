@@ -57,11 +57,17 @@ without a GPU fixture.
 
 ## Release and deployment
 
-Tag `v0.1.11` is the release trigger. The static site remains `dist/site` and
-the factory branch deployment configuration remains unchanged. The GitHub
-Actions matrix is the only place platform artifacts are built; once it
-finishes, verify each release asset, `SHA256SUMS`, and `latest.json` before
-calling the landing buttons live.
+Tag `v0.1.11` ran successfully in GitHub Actions run `33191502705`. Its release
+is [v0.1.11](https://github.com/B-Divyesh/sf-gpu-vram-burnin/releases/tag/v0.1.11):
+six installable assets (two DMGs, AppImage, DEB, MSI, and NSIS EXE), a six-line
+`SHA256SUMS`, and a six-asset `latest.json`. The downloaded AMD64 DEB verified
+against that manifest. Metadata files are intentionally excluded from both
+lists, so the manifest never attempts to checksum itself.
+
+`dist/site` was deployed through the factory static deployment configuration on
+2026-08-28. `https://gpu-vram-burnin.sociobot.in/`, `/demo`, and `/privacy`
+returned 200 after deployment; the live shell serves cache `gpu-vram-burnin-v3`
+and the v0.1.11 hashed bundle.
 
 ## Operator action
 
