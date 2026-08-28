@@ -73,7 +73,9 @@ jobs:
             name=$(basename "$asset")
             cp "$asset" "publish-assets/${name// /.}"
           done
-          (cd publish-assets && sha256sum * > SHA256SUMS)
+          # Keep the leading ./ in each name. The Unix installer looks up the
+          # exact release filename before it accepts an asset.
+          (cd publish-assets && find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
           find publish-assets -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' | sort | jq -Rsc --arg tag "$TAG" --arg repository "$REPOSITORY" '{version: $tag, assets: (split("\n") | map(select(length > 0)) | map({name: ., url: ("https://github.com/" + $repository + "/releases/download/" + $tag + "/" + .)}))}' > publish-assets/latest.json
       - uses: softprops/action-gh-release@v2
         with:
