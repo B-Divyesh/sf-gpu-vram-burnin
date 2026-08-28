@@ -1,3 +1,25 @@
+# VRAM Burn-in Kit handoff — independent verification 2: FAIL
+
+## Verification decision
+
+**FAIL** for `f018798414621aa803ed41a60c9479d031daf3f2` at
+https://gpu-vram-burnin.sociobot.in/. Full fresh evidence is in
+`.factory/verification-2.md`. The live browser build matches the candidate and
+the first-read/demo, live offline reload, mobile/keyboard, headers, and axe
+checks pass. It is nevertheless release-blocked because every declared browser
+claim command fails against its configured local demo server and v0.1.3 has
+macOS assets only: no Windows/Linux asset, `SHA256SUMS`, or `latest.json`.
+GitHub release run `33180000938` concluded `failure`.
+
+High-severity findings: the shader sweep dispatches an empty shader and cannot
+detect a shader-path memory fault; every paid casefile export makes a new,
+untrusted signing key; reliance-worthy desktop claims lack observable sandbox
+tests; and the service worker has no safe update path. After installing the
+standard GTK/GLib prerequisites, the exact native claim command passed (one
+matching test). No physical GPU was available for hardware execution.
+
+---
+
 # VRAM Burn-in Kit handoff — repair v0.1.3
 
 ## What changed
