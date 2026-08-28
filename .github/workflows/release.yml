@@ -68,11 +68,15 @@ jobs:
           TAG: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          (cd release-assets && find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) > SHA256SUMS
-          find release-assets -type f -printf '%f\n' | sort | jq -Rsc --arg tag "$TAG" --arg repository "$REPOSITORY" '{version: $tag, assets: (split("\n") | map(select(length > 0)) | map({name: ., url: ("https://github.com/" + $repository + "/releases/download/" + $tag + "/" + (gsub(" "; "%20")))}))}' > latest.json
-          mv SHA256SUMS latest.json release-assets/
+          mkdir publish-assets
+          find release-assets -type f -print0 | while IFS= read -r -d '' asset; do
+            name=$(basename "$asset")
+            cp "$asset" "publish-assets/${name// /.}"
+          done
+          (cd publish-assets && sha256sum * > SHA256SUMS)
+          find publish-assets -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' | sort | jq -Rsc --arg tag "$TAG" --arg repository "$REPOSITORY" '{version: $tag, assets: (split("\n") | map(select(length > 0)) | map({name: ., url: ("https://github.com/" + $repository + "/releases/download/" + $tag + "/" + .)}))}' > publish-assets/latest.json
       - uses: softprops/action-gh-release@v2
         with:
           name: VRAM Burn-in Kit ${{ github.ref_name }}
           body: Unsigned desktop builds. Verify SHA256SUMS before installing.
-          files: release-assets/**/*
+          files: publish-assets/*
