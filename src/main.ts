@@ -1,6 +1,7 @@
 import './style.css';
 import { invoke } from '@tauri-apps/api/core';
 import { casefile, casefileHtml, download, makeSampleRun, sampleStages, type RunReceipt, type Stage } from './diagnostic';
+import { signedCasefile } from './signing';
 
 const root = document.querySelector<HTMLDivElement>('#app')!;
 const product = 'VRAM Burn-in Kit';
@@ -35,7 +36,7 @@ window.addEventListener('online', () => { offline = false; render(); });
 window.addEventListener('offline', () => { offline = true; render(); });
 
 function header() { return `<a class="skip" href="#main">Skip to content</a><header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">▣</span> VRAM Burn-in Kit</a><nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="#how" data-anchor>How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>`; }
-function footer() { return `<footer><p>Bounded GPU memory tests with a diagnostic receipt.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.3</p><p class="generated-note">Illustration generated for this product.</p></footer>`; }
+function footer() { return `<footer><p>Bounded GPU memory tests with a diagnostic receipt.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.4</p><p class="generated-note">Illustration generated for this product.</p></footer>`; }
 function banner() { return demo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span><button class="quiet" data-action="reset-demo">Reset demo</button><button class="quiet" data-action="start-real">Start for real</button></span></aside>` : ''; }
 function layout(content: string) { return `${header()}${banner()}<main id="main" tabindex="-1">${offline ? '<p class="offline" role="status">You are offline. The sample run and exports still work.</p>' : ''}${content}</main>${footer()}<div class="sr" aria-live="polite">${liveMessage}</div>`; }
 
@@ -69,7 +70,11 @@ async function action(kind: string) {
   if (kind === 'start-real') { demo = false; run = loadRun(realStorageKey); localStorage.removeItem(demoStorageKey); liveMessage = 'Demo data discarded.'; nav('/'); return; }
   if (kind === 'json' && run) { download(casefile(run), `${run.id}.json`, 'application/json'); liveMessage = 'JSON casefile downloaded.'; return; }
   if (kind === 'html' && run) { download(casefileHtml(run), `${run.id}.html`, 'text/html'); liveMessage = 'HTML casefile downloaded.'; return; }
-  if (kind === 'signed-json' && run && isPro()) { download(await signedCasefile(run), `${run.id}.signed.json`, 'application/json'); liveMessage = 'Signed JSON casefile downloaded.'; return; }
+  if (kind === 'signed-json' && run && isPro()) {
+    try { download(await signedCasefile(run), `${run.id}.signed.json`, 'application/json'); liveMessage = 'Signed JSON casefile downloaded.'; }
+    catch { liveMessage = 'Could not create the local signing identity. Check browser or app storage, then try again.'; render(); }
+    return;
+  }
   if (kind === 'scan') { await scanAdapters(); return; }
   if (kind === 'run') { await runDiagnostic(); return; }
   if (kind.startsWith('download-')) { await downloadLatest(kind.replace('download-', '')); }
@@ -93,13 +98,6 @@ async function runDiagnostic() {
     run = { ...receipt, demo: false }; saveRun(run); liveMessage = 'Memory test receipt ready.'; benchMessage = '';
   } catch (error) { benchMessage = typeof error === 'string' ? error : 'The test could not finish. Let the card cool or choose a smaller window, then retry.'; }
   finally { running = false; render(); }
-}
-async function signedCasefile(receipt: RunReceipt) {
-  const payload = casefile(receipt);
-  const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
-  const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, keys.privateKey, new TextEncoder().encode(payload));
-  const encode = (bytes: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
-  return JSON.stringify({ casefile: JSON.parse(payload), signature: { algorithm: 'ECDSA-P256-SHA256', value: encode(signature), public_key: await crypto.subtle.exportKey('jwk', keys.publicKey) } }, null, 2);
 }
 async function downloadLatest(platform: string) {
   const status = document.querySelector('#download-status');
@@ -128,7 +126,21 @@ function restoreCachedLicense() {
   const token = localStorage.getItem(licenseKey); const cached = license();
   if (token && (!cached || cached.token !== token || Date.now() - cached.checkedAt >= 86_400_000) && navigator.onLine) void verify(token);
 }
-if ('serviceWorker' in navigator) window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js'));
+if ('serviceWorker' in navigator) window.addEventListener('load', () => {
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) location.reload();
+    hadController = true;
+  });
+  void navigator.serviceWorker.register('/sw.js').then(registration => {
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      worker?.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) worker.postMessage('skip-waiting');
+      });
+    });
+  });
+});
 const token = new URLSearchParams(location.search).get('license'); if (token) { history.replaceState({}, '', location.pathname); void verify(token); } else { restoreCachedLicense(); render(); }
 
 export { casefile, makeSampleRun, sampleStages };

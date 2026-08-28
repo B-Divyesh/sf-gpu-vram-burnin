@@ -2,7 +2,7 @@
 
 VRAM Burn-in Kit is a local desktop utility for PC builders and local-AI
 operators. It runs bounded GPU memory checks and exports a small casefile that
-separates allocation, fill, copy, readback, and GPU compute scheduling results.
+separates allocation, fill, copy, readback, and GPU shader-pattern results.
 
 It is for a card you do not yet trust with an overnight render or inference
 job. It is not an overclocking tool, repair tool, or hardware certification.
@@ -36,9 +36,10 @@ npm run tauri build
 
 The Rust core enumerates adapters through the platform GPU API, allocates the
 chosen bounded window, writes deterministic patterns, copies and reads it back,
-then submits a GPU compute pass. When NVIDIA `nvidia-smi` telemetry is present,
-it checks the temperature guard before each attempt. It does not change clocks,
-power limits, or driver settings.
+then runs a compute shader that checks every copied memory word and returns its
+mismatch count. When NVIDIA `nvidia-smi` telemetry is present, it checks the
+temperature guard before each attempt. It does not change clocks, power limits,
+or driver settings.
 
 ## Install
 
@@ -68,8 +69,12 @@ Diagnostics and exported casefiles stay local. The only optional network call
 is a Pro license verification with Sociobot. The free sample, basic receipt,
 and export work without it. The site includes `/privacy` and `/terms` routes.
 
-Pro is a one-time $19 license. Checkout and verification use Sociobot; no
-payment credentials are embedded in the product.
+Pro is a one-time $19 license. It can create a signed JSON casefile with one
+persistent local P-256 identity stored in the browser or app's IndexedDB. The
+export contains its local key id and public key so a recipient can verify that
+casefile's signature. This is local provenance, not a publisher certificate.
+Checkout and verification use Sociobot; no payment credentials are embedded in
+the product.
 
 ## Project notes
 

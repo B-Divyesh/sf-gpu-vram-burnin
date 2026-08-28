@@ -1,4 +1,8 @@
-const CACHE = 'gpu-vram-burnin-v2';
+// Bump this on every shell change. Hashed Vite assets can stay cache-first;
+// navigations must check the network so an installed app cannot be pinned to
+// an old shell forever.
+const CACHE = 'gpu-vram-burnin-v3';
+const CACHE_PREFIX = 'gpu-vram-burnin-';
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
@@ -12,15 +16,33 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('activate', event => event.waitUntil((async () => {
+  await Promise.all((await caches.keys())
+    .filter(name => name.startsWith(CACHE_PREFIX) && name !== CACHE)
+    .map(name => caches.delete(name)));
+  await self.clients.claim();
+})()));
+
+self.addEventListener('message', event => {
+  if (event.data === 'skip-waiting') self.skipWaiting();
+});
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== location.origin) return;
-  event.respondWith(caches.match(event.request).then(cached => {
-    const network = fetch(event.request).then(async response => {
+  const networkFirst = event.request.mode === 'navigate';
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    const network = async () => {
+      const response = await fetch(event.request);
       if (response.ok) await caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
       return response;
-    }).catch(() => cached || (event.request.mode === 'navigate' ? caches.match('/demo') : Response.error()));
-    return cached || network;
-  }));
+    };
+    if (networkFirst) {
+      try { return await network(); }
+      catch { return cached || caches.match('/') || Response.error(); }
+    }
+    if (cached) return cached;
+    try { return await network(); }
+    catch { return Response.error(); }
+  })());
 });

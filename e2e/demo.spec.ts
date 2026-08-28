@@ -70,7 +70,46 @@ test('@claim:no-telemetry sends no diagnostic data away during the demo flow', a
   expect(external).toEqual([]);
 });
 
-for (const path of ['/', '/demo', '/404.html']) {
+test('@claim:local-signing reuses one local identity and produces a verifiable casefile', async ({ page }) => {
+  await page.goto('/demo');
+  await page.evaluate(() => localStorage.setItem('sb_license_cache:gpu-vram-burnin', JSON.stringify({ token: 'sandbox-license', valid: true, checkedAt: Date.now() })));
+  await page.reload();
+  const signed = async () => {
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download signed JSON' }).click();
+    const stream = await (await download).createReadStream();
+    let output = ''; for await (const chunk of stream!) output += chunk;
+    return JSON.parse(output) as { casefile: object; signature: { value: string; public_key: JsonWebKey; key_id: string } };
+  };
+  const first = await signed();
+  const second = await signed();
+  expect(first.signature.key_id).toMatch(/^local-p256:[a-f0-9]{24}$/);
+  expect(second.signature.key_id).toBe(first.signature.key_id);
+  const valid = await page.evaluate(async signedCasefile => {
+    const publicKey = await crypto.subtle.importKey('jwk', signedCasefile.signature.public_key, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['verify']);
+    const bytes = Uint8Array.from(atob(signedCasefile.signature.value), character => character.charCodeAt(0));
+    return crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, publicKey, bytes, new TextEncoder().encode(JSON.stringify(signedCasefile.casefile, null, 2)));
+  }, first);
+  expect(valid).toBe(true);
+});
+
+test('configured preview serves the demo route rather than relying on deployment rewrites', async ({ page }) => {
+  await page.goto('/demo');
+  await expect(page.getByRole('heading', { name: 'Inspect a GPU memory test receipt.' })).toBeVisible();
+});
+
+test('public routes load without console or page errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', error => errors.push(error.message));
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/404.html']) {
+    await page.goto(path);
+    await expect(page.locator('h1')).toBeVisible();
+  }
+  expect(errors).toEqual([]);
+});
+
+for (const path of ['/', '/demo', '/privacy', '/terms', '/404.html']) {
   test(`accessibility has no serious or critical violations on ${path}`, async ({ page }) => {
     await page.goto(path);
     const results = await new AxeBuilder({ page }).analyze();

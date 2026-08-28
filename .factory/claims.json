@@ -36,9 +36,44 @@
   },
   {
     "id": "bounded-desktop-test",
-    "claim": "Desktop tests run locally",
-    "where": "landing facts, README",
+    "claim": "Desktop test guardrails reject unsafe settings before GPU work",
+    "where": "desktop test controls, README",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml diagnostic_contract_rejects_unsafe_windows_and_guards",
     "sandbox": "native core regression; assert only a bounded 64 MiB–16 GiB window, 50°C–100°C guard, and up to two retries are accepted before GPU work begins"
+  },
+  {
+    "id": "desktop-pipeline",
+    "claim": "The desktop test keeps allocation, fill, copy, readback, and shader results separate",
+    "where": "landing preview, desktop receipt, README",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_pipeline_attributes_seeded_faults_to_the_right_stage",
+    "sandbox": "native fixture seeds a compute-path mismatch and asserts that Shader sweep alone records the failure"
+  },
+  {
+    "id": "desktop-local",
+    "claim": "Desktop tests run locally",
+    "where": "landing facts, README",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_pipeline_attributes_seeded_faults_to_the_right_stage",
+    "sandbox": "native core runs in the local app process; its deterministic fixture exercises stage attribution without a network or a physical GPU"
+  },
+  {
+    "id": "thermal-guard",
+    "claim": "The desktop test stops when NVIDIA temperature telemetry reaches the chosen guard",
+    "where": "desktop test controls, README",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_thermal_guard_stops_hot_adapters_before_gpu_work",
+    "sandbox": "native fixture supplies below-limit, unavailable, and at-limit telemetry and observes the guard decision"
+  },
+  {
+    "id": "adapter-discovery",
+    "claim": "The desktop app lists supported GPU adapters",
+    "where": "how it works, README",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_adapter_discovery_parses_supported_nvidia_telemetry_fixture",
+    "sandbox": "native fixture parses a representative supported NVIDIA telemetry response into adapter name, memory, and temperature"
+  },
+  {
+    "id": "local-signing",
+    "claim": "Pro signed JSON casefiles use one persistent local signing identity",
+    "where": "Pro section, README",
+    "test": "npm run test:e2e -- --grep @claim:local-signing",
+    "sandbox": "fresh Chromium context grants a sandbox license, downloads two signed casefiles, checks the stable local key id, and verifies the ECDSA signature"
   }
 ]
