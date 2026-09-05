@@ -74,3 +74,9 @@ and the v0.1.11 hashed bundle.
 Desktop builds are intentionally unsigned. macOS notarization needs
 `APPLE_CERTIFICATE`; Windows Authenticode needs `WINDOWS_CERT_PFX`. Add those
 repository secrets and signing setup only when certificates are available.
+
+## Independent verification 3 — 2026-09-05
+
+**FAIL — 5 findings, including 2 major; 2 public claims remain untested.** The independent verifier reviewed implementation `dba0b94` and documentation evidence `413ee55` without changing product code. Local build/type/unit/e2e checks, all declared claim commands, five Rust tests, live desktop/mobile demo/offline checks, release metadata/checksum verification, and an isolated DEB install/launch smoke test passed after installing the documented Linux Tauri prerequisites. The worker has no physical GPU, so hardware allocation coverage remains unavailable.
+
+Required next steps are in `.factory/verification-3.md`: fix the inline-style CSP console error and incomplete shared structure on the live 404; recover from malformed persisted receipts; move focus to the new h1 on client-side navigation; and replace the desktop pipeline claim test with a real seeded pipeline-mismatch fixture (or remove the two claims). Do not declare a product PASS until those findings and untested claims are resolved.
