@@ -35,13 +35,33 @@ test('@claim:html-casefile downloads a printable HTML casefile', async ({ page }
 
 test('demo storage is isolated and reset discards only demo data', async ({ page }) => {
   await page.goto('/demo');
-  await page.evaluate(() => localStorage.setItem('gpu-vram-burnin:receipt', JSON.stringify({ id: 'REAL' })));
+  await page.evaluate(() => localStorage.setItem('gpu-vram-burnin:receipt', JSON.stringify({
+    id: 'REAL', startedAt: '2026-09-06T00:00:00.000Z', gpu: 'Real GPU', temperature: 60,
+    confidence: 'Saved local result', demo: false,
+    stages: [{ name: 'Allocate', result: 'pass', bytes: '1.0 GiB', detail: 'Saved stage', errors: 0 }]
+  })));
   await page.getByRole('button', { name: 'Reset demo' }).click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:gpu-vram-burnin:receipt'))).not.toBeNull();
   await page.getByRole('button', { name: 'Start for real' }).click();
   await expect(page).toHaveURL('/');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('demo:gpu-vram-burnin:receipt'))).toBeNull();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('gpu-vram-burnin:receipt'))).toContain('REAL');
+});
+
+test('recovers from an invalid saved receipt without blanking the app', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('gpu-vram-burnin:receipt', JSON.stringify({ id: 'corrupt-but-valid-json' })));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Test GPU memory before long jobs.' })).toBeVisible();
+  await expect(page.locator('.recovery')).toContainText('Saved test receipt could not be read. It was removed. Start a new test.');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('gpu-vram-burnin:receipt'))).toBeNull();
+});
+
+test('client navigation focuses and announces the destination heading', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Privacy' }).first().click();
+  await expect(page).toHaveURL('/privacy');
+  await expect(page.getByRole('heading', { name: 'Your test data stays on this device.' })).toBeFocused();
+  await expect(page.locator('[aria-live="polite"]')).toHaveText('Privacy.');
 });
 
 test('keyboard and restore field remain operable at mobile width', async ({ page }) => {
@@ -106,6 +126,30 @@ test('public routes load without console or page errors', async ({ page }) => {
     await page.goto(path);
     await expect(page.locator('h1')).toBeVisible();
   }
+  expect(errors).toEqual([]);
+});
+
+test('static 404 uses the shared accessible shell without CSP errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('pageerror', error => errors.push(error.message));
+  await page.route('**/404.html', async route => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      headers: {
+        ...response.headers(),
+        'content-security-policy': "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      }
+    });
+  });
+  await page.goto('/404.html');
+  await expect(page.getByText('Skip to content')).toBeVisible();
+  await expect(page.locator('header')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+  await expect(page.locator('main')).toBeVisible();
+  await expect(page.locator('footer')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'This page was not found.' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

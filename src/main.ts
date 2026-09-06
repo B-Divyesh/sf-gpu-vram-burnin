@@ -9,9 +9,10 @@ let demo = location.pathname === '/demo' || location.search.includes('demo=1');
 const demoStorageKey = 'demo:gpu-vram-burnin:receipt';
 const realStorageKey = 'gpu-vram-burnin:receipt';
 const isDesktop = '__TAURI_INTERNALS__' in window;
-let run: RunReceipt | null = loadRun(demo ? demoStorageKey : realStorageKey) || (demo ? makeSampleRun() : null);
 let offline = !navigator.onLine;
-let liveMessage = '';
+let recoveryMessage = '';
+let run: RunReceipt | null = loadRun(demo ? demoStorageKey : realStorageKey) || (demo ? makeSampleRun() : null);
+let liveMessage = recoveryMessage;
 let adapters: Adapter[] = [];
 let benchMessage = '';
 let running = false;
@@ -24,21 +25,46 @@ const licenseKey = 'sb_license:gpu-vram-burnin';
 const licenseCache = 'sb_license_cache:gpu-vram-burnin';
 function license(): License | null { try { return JSON.parse(localStorage.getItem(licenseCache) || 'null'); } catch { return null; } }
 function isPro() { const item = license(); return !!item?.valid; }
-function loadRun(key: string): RunReceipt | null { try { return JSON.parse(localStorage.getItem(key) || 'null') as RunReceipt | null; } catch { return null; } }
+function isStage(value: unknown): value is Stage {
+  if (!value || typeof value !== 'object') return false;
+  const stage = value as Partial<Stage>;
+  return ['Allocate', 'Fill patterns', 'Copy path', 'Readback', 'Shader sweep'].includes(stage.name || '')
+    && ['pass', 'retry', 'fail', 'pending'].includes(stage.result || '')
+    && typeof stage.bytes === 'string' && typeof stage.detail === 'string' && typeof stage.errors === 'number';
+}
+function isRunReceipt(value: unknown): value is RunReceipt {
+  if (!value || typeof value !== 'object') return false;
+  const receipt = value as Partial<RunReceipt>;
+  return typeof receipt.id === 'string' && typeof receipt.startedAt === 'string' && typeof receipt.gpu === 'string'
+    && typeof receipt.temperature === 'number' && Number.isFinite(receipt.temperature)
+    && typeof receipt.confidence === 'string' && typeof receipt.demo === 'boolean'
+    && Array.isArray(receipt.stages) && receipt.stages.length > 0 && receipt.stages.every(isStage);
+}
+function loadRun(key: string): RunReceipt | null {
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+    const receipt: unknown = JSON.parse(stored);
+    if (isRunReceipt(receipt)) return receipt;
+  } catch { /* malformed browser storage is recoverable */ }
+  try { localStorage.removeItem(key); } catch { /* storage may be unavailable */ }
+  recoveryMessage = 'Saved test receipt could not be read. It was removed. Start a new test.';
+  return null;
+}
 function saveRun(receipt: RunReceipt) { localStorage.setItem(receipt.demo ? demoStorageKey : realStorageKey, JSON.stringify(receipt)); }
 function esc(value: string) { return value.replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]!); }
 if (demo && run && !localStorage.getItem(demoStorageKey)) saveRun(run);
 
 function appPath() { if (location.search.includes('demo=1')) return '/demo'; return location.pathname.replace(/\/$/, '') || '/'; }
-function nav(to: string) { history.pushState({}, '', to); render(); window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
-window.addEventListener('popstate', render);
+function nav(to: string) { history.pushState({}, '', to); render(true); window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+window.addEventListener('popstate', () => render(true));
 window.addEventListener('online', () => { offline = false; render(); });
 window.addEventListener('offline', () => { offline = true; render(); });
 
 function header() { return `<a class="skip" href="#main">Skip to content</a><header class="site-head"><a class="wordmark" href="/" data-link><span aria-hidden="true">▣</span> VRAM Burn-in Kit</a><nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="#how" data-anchor>How it works</a><a href="/privacy" data-link>Privacy</a></nav></header>`; }
 function footer() { return `<footer><p>Bounded GPU memory tests with a diagnostic receipt.</p><p><a href="/privacy" data-link>Privacy</a> · <a href="/terms" data-link>Terms</a> · Built by Param Factory · v0.1.11</p><p class="generated-note">Illustration generated for this product.</p></footer>`; }
 function banner() { return demo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span><button class="quiet" data-action="reset-demo">Reset demo</button><button class="quiet" data-action="start-real">Start for real</button></span></aside>` : ''; }
-function layout(content: string) { return `${header()}${banner()}<main id="main" tabindex="-1">${offline ? '<p class="offline" role="status">You are offline. The sample run and exports still work.</p>' : ''}${content}</main>${footer()}<div class="sr" aria-live="polite">${liveMessage}</div>`; }
+function layout(content: string) { return `${header()}${banner()}<main id="main" tabindex="-1">${recoveryMessage ? `<p class="recovery" role="status">${recoveryMessage}</p>` : ''}${offline ? '<p class="offline" role="status">You are offline. The sample run and exports still work.</p>' : ''}${content}</main>${footer()}<div class="sr" aria-live="polite">${liveMessage}</div>`; }
 
 function stageList(stages: Stage[], compact = false) { return `<ol class="stages ${compact ? 'compact' : ''}">${stages.map((s, i) => `<li class="stage ${s.result}"><span class="number">${i + 1}</span><div><strong>${s.name}</strong><small>${s.detail}</small></div><span class="stage-data">${s.bytes}<b>${s.errors ? `${s.errors} mismatch` : s.result === 'pending' ? 'waiting' : s.result}</b></span></li>`).join('')}</ol>`; }
 function runPanel() {
@@ -56,9 +82,21 @@ function downloads() { return `<section id="downloads" class="downloads" aria-la
 function landing() { return layout(`<section class="hero"><div class="hero-copy"><p class="eyebrow">GPU memory test receipt</p><h1>Test GPU memory before long jobs.</h1><p class="lede">For PC builders and local-AI operators who need evidence before trusting a card overnight.</p><div class="actions"><button class="primary" data-action="sample">Try it with sample data</button><span>See a finished test receipt.</span></div><ul class="facts"><li>Desktop tests run locally</li><li>Sample works offline</li><li>Basic pass is free</li></ul></div><figure><img src="/paper-gpu.webp" width="1200" height="800" fetchpriority="high" alt="A paper-cut graphics card test bench with memory chips and an inspection slip."><figcaption>Each paper layer is a test stage you can inspect.</figcaption></figure></section><section class="product-preview" aria-labelledby="preview-heading"><div><p class="eyebrow">The product</p><h2 id="preview-heading">Know which path disagreed.</h2><p>Allocation, fill, copy, readback, and shader passes remain separate in the receipt.</p></div>${runPanel()}</section><section id="how" class="how" aria-labelledby="how-heading"><p class="eyebrow">How it works</p><h2 id="how-heading">Run a bounded memory check in three steps.</h2><ol><li><strong>Pick the adapter.</strong><span>The desktop app lists its supported GPU adapters.</span></li><li><strong>Set the guardrails.</strong><span>Choose a memory window, stop temperature, and retry count.</span></li><li><strong>Attach the casefile.</strong><span>Export the exact stages and result for support.</span></li></ol></section><section class="limits"><h2>What this tool does not do.</h2><p>It does not overclock, repair, tune drivers, or promise a healthy card. It tests a chosen memory window and reports what it saw.</p><p>No telemetry runs. Your test receipt stays on this device unless you download it.</p></section>${downloads()}${paid()}`); }
 function demoPage() { return layout(`<section class="app-page"><div class="app-intro"><p class="eyebrow">Sample data</p><h1>Inspect a GPU memory test receipt.</h1><p class="lede">This sample shows a clean, bounded 8 GiB test on a typical local-AI card.</p></div>${runPanel()}<aside class="callout"><strong>What you are seeing</strong><p>The receipt separates transfer failures from compute-path failures. Download either casefile format to inspect it.</p></aside></section>${paid()}`); }
 function legal(kind: 'privacy' | 'terms') { const privacy = kind === 'privacy'; document.title = `${privacy ? 'Privacy' : 'Terms'} — ${product}`; return layout(`<article class="legal"><p class="eyebrow">${privacy ? 'Privacy' : 'Terms'}</p><h1>${privacy ? 'Your test data stays on this device.' : 'Terms for VRAM Burn-in Kit.'}</h1>${privacy ? '<p>VRAM Burn-in Kit does not send diagnostics, hardware names, or casefiles to us. The sample mode uses a separate browser storage key and is discarded when you start for real.</p><p>If you buy Pro or verify a license, your browser contacts Sociobot’s billing service. Sociobot and Dodo act as merchant of record. We do not operate analytics.</p><p>You can clear local product data in your browser or app storage at any time.</p>' : '<p>This tool reports the outcome of bounded memory tests. It does not certify hardware health or prevent data loss. Use it on a stable system and keep backups.</p><p>Pro is a one-time license. License verification is provided by Sociobot. A refund may revoke the license.</p><p>Nothing in this app is repair, driver-tuning, or overclocking advice.</p>'}</article>`); }
-function notFound() { document.title = `Not found — ${product}`; return layout(`<section class="not-found"><div class="paper-stack" aria-hidden="true"><span></span><span></span><span></span></div><h1>That test sheet is missing.</h1><p>Return to the diagnostic bench to start a sample run.</p><a class="primary" href="/" data-link>Return to the bench</a></section>`); }
+function notFound() { document.title = `Not found — ${product}`; return layout(`<section class="not-found"><div class="paper-stack" aria-hidden="true"><span></span><span></span><span></span></div><h1>This page was not found.</h1><p>Return home to start a sample test.</p><a class="primary" href="/" data-link>Return home</a></section>`); }
 
-function render() { const path = appPath(); document.title = path === '/' ? `${product} — test GPU memory` : path === '/demo' ? `Demo — ${product}` : document.title; root.innerHTML = path === '/' ? landing() : path === '/demo' ? demoPage() : path === '/privacy' ? legal('privacy') : path === '/terms' ? legal('terms') : notFound(); bind(); requestAnimationFrame(() => document.querySelector<HTMLElement>('h1')?.focus()); }
+function routeAnnouncement(path: string) {
+  return path === '/' ? 'VRAM Burn-in Kit home.' : path === '/demo' ? 'Demo.' : path === '/privacy' ? 'Privacy.' : path === '/terms' ? 'Terms.' : 'Not found.';
+}
+function render(focusHeading = false) {
+  const path = appPath();
+  if (focusHeading) liveMessage = routeAnnouncement(path);
+  document.title = path === '/' ? `${product} — test GPU memory` : path === '/demo' ? `Demo — ${product}` : document.title;
+  root.innerHTML = path === '/' ? landing() : path === '/demo' ? demoPage() : path === '/privacy' ? legal('privacy') : path === '/terms' ? legal('terms') : notFound();
+  bind();
+  const heading = document.querySelector<HTMLElement>('h1');
+  if (heading) heading.tabIndex = -1;
+  if (focusHeading) requestAnimationFrame(() => heading?.focus());
+}
 function bind() {
   root.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); nav(a.getAttribute('href')!); }));
   root.querySelectorAll<HTMLAnchorElement>('[data-anchor]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); document.querySelector(a.getAttribute('href')!)?.scrollIntoView({ behavior: 'smooth' }); }));

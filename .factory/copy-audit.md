@@ -15,6 +15,8 @@
 | It tests a chosen memory window and reports what it saw. | 11 | — |
 | No telemetry runs. | 3 | — |
 | Your test receipt stays on this device unless you download it. | 12 | — |
+| This page was not found. | 5 | — |
+| Return home to start a sample test. | 7 | — |
 
 No sentence exceeds 22 words. No banned words appear.
 

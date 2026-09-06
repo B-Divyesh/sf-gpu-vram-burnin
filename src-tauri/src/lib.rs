@@ -79,6 +79,27 @@ fn validate_config(config: &DiagnosticConfig) -> Result<(), String> {
     Ok(())
 }
 
+// This deterministic in-process fixture follows the same data flow as the
+// native path: allocate, fill, copy, host readback, then compute inspection.
+// It lets the desktop claim test seed a fault after host readback, where only
+// the compute-path inspection can observe it, without requiring a physical GPU.
+#[cfg(test)]
+fn seeded_memory_pipeline_fixture(words: usize, compute_fault_at: Option<usize>) -> Vec<Stage> {
+    let window_mib = 64;
+    let mut source = vec![0u32; words];
+    let mut stages = vec![stage("Allocate", "pass", window_mib, "Allocated the local fixture buffer", 0)];
+    for (index, word) in source.iter_mut().enumerate() { *word = expected_word(index as u32); }
+    stages.push(stage("Fill patterns", "pass", window_mib, "Filled the fixture with the deterministic pattern", 0));
+    let mut copied = source.clone();
+    stages.push(stage("Copy path", "pass", window_mib, "Copied the fixture buffer", 0));
+    let readback_errors = copied.iter().enumerate().filter(|(index, word)| **word != expected_word(*index as u32)).count() as u64;
+    stages.push(stage("Readback", result_for_errors(readback_errors), window_mib, "Compared the copied fixture before compute inspection", readback_errors));
+    if let Some(index) = compute_fault_at { copied[index] ^= 1; }
+    let shader_errors = copied.iter().enumerate().filter(|(index, word)| **word != expected_word(*index as u32)).count() as u64;
+    stages.push(stage("Shader sweep", result_for_errors(shader_errors), window_mib, "Compute-path fixture compared every copied word", shader_errors));
+    stages
+}
+
 fn run_memory_passes(config: &DiagnosticConfig) -> Result<Vec<Stage>, String> {
     validate_config(config)?;
     let instance = wgpu::Instance::default();
@@ -199,14 +220,13 @@ mod tests {
 
     #[test]
     fn claim_desktop_pipeline_attributes_seeded_faults_to_the_right_stage() {
-        assert_eq!(expected_word(0), 0);
-        assert_eq!(expected_word(7), 7u32.wrapping_mul(0x45d9_f3b));
-        assert_eq!(result_for_errors(0), "pass");
-        assert_eq!(result_for_errors(2), "fail");
-        let shader_fault = stage("Shader sweep", result_for_errors(1), 1024, "Seeded compute-path mismatch", 1);
-        assert_eq!(shader_fault.name, "Shader sweep");
-        assert_eq!(shader_fault.result, "fail");
-        assert_eq!(shader_fault.errors, 1);
+        let receipt = seeded_memory_pipeline_fixture(64, Some(17));
+        assert_eq!(receipt.iter().map(|stage| stage.name.as_str()).collect::<Vec<_>>(), vec!["Allocate", "Fill patterns", "Copy path", "Readback", "Shader sweep"]);
+        assert!(receipt.iter().take(4).all(|stage| stage.result == "pass" && stage.errors == 0));
+        let shader = receipt.last().expect("shader stage exists");
+        assert_eq!(shader.name, "Shader sweep");
+        assert_eq!(shader.result, "fail");
+        assert_eq!(shader.errors, 1);
     }
 
     #[test]

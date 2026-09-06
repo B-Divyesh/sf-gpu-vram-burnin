@@ -46,14 +46,14 @@
     "claim": "The desktop test keeps allocation, fill, copy, readback, and shader results separate",
     "where": "landing preview, desktop receipt, README",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_pipeline_attributes_seeded_faults_to_the_right_stage",
-    "sandbox": "native fixture seeds a compute-path mismatch and asserts that Shader sweep alone records the failure"
+    "sandbox": "native in-process fixture allocates, fills, copies, and reads back a local buffer; it then seeds one mismatch before compute inspection and asserts that Shader sweep alone records the failure"
   },
   {
     "id": "desktop-local",
     "claim": "Desktop tests run locally",
     "where": "landing facts, README",
     "test": "cargo test --manifest-path src-tauri/Cargo.toml claim_desktop_pipeline_attributes_seeded_faults_to_the_right_stage",
-    "sandbox": "native core runs in the local app process; its deterministic fixture exercises stage attribution without a network or a physical GPU"
+    "sandbox": "native core runs its deterministic local-buffer pipeline in the app process; it exercises stage attribution without a network or a physical GPU"
   },
   {
     "id": "thermal-guard",
