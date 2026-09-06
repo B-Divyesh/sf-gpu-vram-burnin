@@ -1,84 +1,63 @@
-# VRAM Burn-in Kit handoff — repair v0.1.12
+# VRAM Burn-in Kit handoff — independent verification 4
 
 ## Status
 
-The repaired implementation is `ea169982445c8463e916ec43d1e0042c2452b9a0`
-(`v0.1.12`). It contains the functional repair commit
-`574c10b9e6be7defe85827dfc1ef5214a60ef196`. The preceding independent
-verification documentation is `4bc4c80d1c255a0db6faab22370e86754a5a5c33`.
-The static site built from v0.1.12 was deployed to
-<https://gpu-vram-burnin.sociobot.in/> on 2026-09-06.
+**FAIL.** Independent QA reviewed implementation
+`ea169982445c8463e916ec43d1e0042c2452b9a0` (`v0.1.12`) and documentation
+`55e7c0bc783b19595ec0374fb1853d9b4e238df7` against the live site on
+2026-09-06. Product code was not changed.
 
-The job is to run bounded GPU memory pattern checks and make a support-ready
-casefile. It is for PC builders and local-AI operators. On first screen, the
-first action is **Try it with sample data**.
+The complete report is [verification-4.md](verification-4.md). It records
+7 findings and 3 untested public claims. The main blockers are serious dark
+theme contrast failures, unavailable checkout, a native/frontend receipt
+schema mismatch, and incorrect macOS architecture selection.
 
-## Repairs
+## What was verified
 
-* Replaced the standalone inline-styled 404 with a same-origin stylesheet and
-  the shared skip link, header/navigation, main, and footer. It still returns
-  a deliberate HTTP 404.
-* Validated persisted receipts before rendering. Invalid or incomplete stored
-  data is discarded and a visible recovery notice leaves the app usable.
-* Client-side route changes now set focus on the destination h1 and announce
-  the route through a polite live region.
-* Replaced the claimed seeded-fault placeholder with a deterministic native
-  pipeline fixture. It allocates, fills, copies, and reads a local buffer,
-  injects one mismatch only before compute inspection, and observes a lone
-  Shader sweep failure in the resulting receipt.
-* Reworded the 404 in plain language and bumped the desktop/static version to
-  v0.1.12 so the installed app receives the frontend repairs.
+- Clean `npm ci`, TypeScript, unit, production build, 18 browser checks, five
+  native tests, shell syntax, JSON parsing, and diff checks passed.
+- Every exact command in `.factory/claims.json` passed after installing the
+  Linux Tauri prerequisites documented in the release workflow.
+- Fresh desktop and 390 px phone browsers exercised the first screen, sample,
+  reset, real-data isolation, invalid storage recovery, route focus and live
+  announcement, offline reload, service-worker update cleanup, keyboard,
+  reduced motion, legal pages, privacy requests, downloads, and the designed
+  404.
+- The five findings from verification 3 are fixed.
+- `verify-url.sh` passed. Light-theme axe checks passed. Dark-theme axe checks
+  found the blocker recorded in the report.
+- Lighthouse scored 100 in performance, accessibility, best practices, and
+  SEO in its default light treatment; LCP was 1.2 s, CLS 0, and TBT 10 ms.
+- Release `v0.1.12` contains six installers, a valid six-asset manifest, and
+  six checksums. The AMD64 DEB matched its checksum and stayed open for a
+  12-second isolated Xvfb/D-Bus consumer smoke test.
 
-## Verification
+## Reproduce
 
-From a clean dependency install:
+```sh
+npm ci
+npx tsc --noEmit
+npm test
+npm run build
+npm run test:e2e
+cargo test --manifest-path src-tauri/Cargo.toml
+VERIFY_NODE_MODULES="$PWD/node_modules" /opt/fleet/lib/verify-url.sh \
+  https://gpu-vram-burnin.sociobot.in /work/.evidence
+```
 
-* `npm ci`, `npx tsc --noEmit`, `npm test`, and `npm run build` passed.
-  The built site has 21.28 KB JavaScript (8.16 KB gzip) and 10.60 KB CSS
-  (3.13 KB gzip).
-* `npm run test:e2e` passed all 18 browser checks. They include the new stored
-  receipt recovery, destination-heading focus/live announcement, and static
-  404 under the production `style-src 'self'` policy, plus axe serious/critical
-  checks across landing, demo, legal pages, and 404.
-* `cargo test --manifest-path src-tauri/Cargo.toml` passed all five native
-  tests after installing the documented Linux Tauri prerequisites. Every exact
-  command in `.factory/claims.json` was then run; all eleven declarations
-  passed, including both repeated pipeline claim declarations.
-* `sh -n public/install.sh`, claims JSON parsing, and `git diff --check`
-  passed.
-* `verify-url.sh` against the deployed HTTPS root reported no console errors,
-  one h1, `lang=en`, a main landmark, and no missing image alt text or unnamed
-  buttons. A final mobile Lighthouse run reports performance 100 and
-  accessibility 100; the JSON evidence is
-  `/work/.evidence/lighthouse.json`.
-* Fresh live desktop and 390 px phone contexts confirmed the first screen,
-  one-click RTX 5080 sample receipt, persistent demo label, reset, preservation
-  of a valid real receipt, offline demo reload, recovery from malformed saved
-  data, privacy-route focus, and no mobile horizontal overflow. The static
-  fallback has its shared shell and stylesheet with no CSP violation. Chromium
-  logs the expected network error for the deliberate 404 document status; this
-  is not an application or CSP error.
+Install the Linux native prerequisites listed in
+`.github/workflows/release.yml` before running Cargo tests.
 
-## Release and deployment
+## Work left
 
-`v0.1.12` completed GitHub Actions run
-[34014415915](https://github.com/B-Divyesh/sf-gpu-vram-burnin/actions/runs/34014415915).
-Its release contains six installable artifacts (two DMGs, AppImage, DEB, MSI,
-and NSIS EXE), a six-asset `latest.json`, and a six-line `SHA256SUMS`. The
-downloaded AMD64 DEB verified against the published checksum, reports version
-0.1.12, and stayed open for a 12-second isolated Xvfb/DBus consumer launch
-smoke test. The static deployment is already complete and is independent of
-the artifact build.
-
-The current Pro offer remains a one-time $19 local-signing license. Public
-offer metadata is in `/work/.evidence/billing-offer.json`. The live Sociobot
-checkout endpoint currently returns HTTP 404, so billing registration is an
-external dependency; the free basic test and exports continue to work.
-
-## Known limits and operator action
-
-No physical GPU is available in this worker. The deterministic native fixture
-proves stage attribution, but a real allocation/readback/shader hardware run
-still needs a supported GPU smoke test. Desktop builds remain unsigned:
-macOS notarization needs `APPLE_CERTIFICATE` and Windows signing needs
-`WINDOWS_CERT_PFX` when those certificates are available.
+1. Correct all dark-theme contrast failures and retest every route in light
+   and dark color schemes.
+2. Register the Sociobot billing product so the advertised checkout redirects
+   to a working hosted purchase.
+3. Align native and frontend receipt types for nullable temperature and a real
+   ISO timestamp; test persistence and export for telemetry-unavailable GPUs.
+4. Select macOS DMGs by CPU architecture in both the site and shell installer.
+5. Add or narrow the three public claims listed in verification 4.
+6. Repair the non-home How it works link and the two narrow touch targets.
+7. Run a final hardware smoke test on a supported physical GPU. Desktop builds
+   remain unsigned until operator certificates are available.
